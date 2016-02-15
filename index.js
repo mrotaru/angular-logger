@@ -3,9 +3,17 @@ angular
   .provider('Logger', Logger);
 
 function Logger() {
-  let config = {
-    enabled: true,
+  let globalConfig = {
+    store: 0
   };
+
+  this.setStore = function(max) {
+    globalConfig.store = max;
+  };
+
+  let storedEntries = [];
+  let globalLogger = null;
+
   this.$get = ['$log', function($log) {
 
     var logger = {
@@ -19,26 +27,39 @@ function Logger() {
     }
 
     function _log(type, msg) {
-      if(!config.enabled || !this.config.enabled)
+      if(!this.config.enabled)
         return;
       var scopes = this.loggerScopes.map((s) => { return `${s}:` }).join('');
-      $log[type](`${scopes} ${msg}`);
+      var logMessage = `${scopes} ${msg}`;
+      $log[type](logMessage);
+      if(globalConfig.store) {
+        storedEntries.push(`[${type}]${logMessage}`);
+        var sd = storedEntries.length - globalConfig.store;
+        if(sd > 0)
+          storedEntries.splice(0, sd);
+      }
     }
 
     function instantiate(parent) {
       function _instantiate(loggerScope) {
+        if(!parent && !logger.isPrototypeOf(parent) && globalLogger)
+          return globalLogger;
         let ret = Object.create(logger);
-        let isChild = parent && logger.isPrototypeOf(parent);
-        if(isChild) {
-          ret.loggerScopes = parent.loggerScopes.concat(loggerScope);
-          ret.config = {
-            enabled: true,
-          };
-        } else {
-          ret.loggerScopes = [loggerScope];
-          ret.config = config;
-        }
         ret.logger = instantiate(ret);
+        ret.config = {
+          enabled: true,
+        };
+        if(parent && logger.isPrototypeOf(parent)) {
+          ret.loggerScopes = parent.loggerScopes.concat(loggerScope);
+        } else {
+          ret.loggerScopes = [];
+          ret.getStoredEntries = function() {
+            return storedEntries;
+          }
+          if(!globalLogger) {
+            globalLogger = ret;
+          }
+        }
         return ret;
       }
       return _instantiate;
