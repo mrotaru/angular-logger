@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="app">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <title>Logger example</title>
+    <script src="node_modules/angular/angular.js"></script>
+    <script src="../index.js"></script>
+    <script src="app.js"></script>
+  </head>
+  <body ng-controller="main">
+    <input ng-model="myInput">
+    <button ng-click="info()">Info</button>
+    <button ng-click="log()">Log</button>
+    <button ng-click="error()">Error</button>
+  </body>
+</html>
