@@ -1,71 +1,48 @@
 angular
   .module('lib.logger', [])
-  .provider('Logger', Logger);
+  .provider('LoggerConfig', LoggerConfig)
+  .config(config)
 
-function Logger() {
-  let globalConfig = {
-    store: 0
+function LoggerConfig() {
+  let _config = {
+    showLocation: false
   };
+  this.config = (params) => { angular.merge(_config, params); }
+  this.getConfig = () => { return _config; }
 
-  this.setStore = function(max) {
-    globalConfig.store = max;
-  };
+  this.$get = function() {
+    return _config;
+  }
+}
 
-  let storedEntries = [];
-  let globalLogger = null;
+config.$inject = ['$provide', 'LoggerConfigProvider'];
+function config($provide, LoggerConfigProvider) {
+  let cfg = LoggerConfigProvider.getConfig();
 
-  this.$get = ['$log', function($log) {
+  $provide.decorator('$log', decorator);
 
-    var logger = {
-      log:   function(msg) { _log.call(this, 'log', msg) },
-      info:  function(msg) { _log.call(this, 'info', msg) },
-      warn:  function(msg) { _log.call(this, 'warn', msg) },
-      debug: function(msg) { _log.call(this, 'debug', msg) },
-      error: function(msg) { _log.call(this, 'error', msg) },
-      enable:  function() { this.config.enabled = true },
-      disable: function() { this.config.enabled = false }
-    }
+  decorator.$inject = ['$delegate'];
+  function decorator($log) {
+    const fns = ['log', 'info', 'warn', 'debug', 'error'];
 
-    function _log(type, msg) {
-      if(!this.config.enabled)
-        return;
-      var scopes = this.loggerScopes.map((s) => { return `${s}:` }).join('');
-      var logMessage = `${scopes} ${msg}`;
-      $log[type](logMessage);
-      if(globalConfig.store) {
-        storedEntries.push(`[${type}]${logMessage}`);
-        var sd = storedEntries.length - globalConfig.store;
-        if(sd > 0)
-          storedEntries.splice(0, sd);
-      }
-    }
-
-    function instantiate(parent) {
-      function _instantiate(loggerScope) {
-        if(!parent && !logger.isPrototypeOf(parent) && globalLogger)
-          return globalLogger;
-        let ret = Object.create(logger);
-        ret.logger = instantiate(ret);
-        ret.config = {
-          enabled: true,
-        };
-        if(parent && logger.isPrototypeOf(parent)) {
-          ret.loggerScopes = parent.loggerScopes.concat(loggerScope);
-        } else {
-          ret.loggerScopes = [];
-          ret.getStoredEntries = function() {
-            return storedEntries;
+    $log.getInstance = function(context = null) {
+      let instance = {
+        context: context
+      };
+      for(let fn of fns) {
+        instance[fn] = (message, ...args) => {
+          let location = '';
+          if(cfg.showLocation) {
+            let stack = (new Error()).stack.split(/\n/);
+            let secondLine = stack[2];
+            location = secondLine.match(/((?:http.*)|(?:file:.*))$/)[1];
           }
-          if(!globalLogger) {
-            globalLogger = ret;
-          }
+          let prefix = context ? `[${context}] ` : '';
+          $log[fn].apply(this, [`${prefix}${message}`, ...args,  location]);
         }
-        return ret;
       }
-      return _instantiate;
+      return instance;
     }
-
-    return instantiate();
-  }];
-
+    return $log;
+  }
 }

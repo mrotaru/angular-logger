@@ -1,13 +1,14 @@
 angular
-  .module("app", ["lib.logger"])
-  .config(["LoggerProvider", function(LoggerProvider){
-    LoggerProvider.setStore(10);
+  .module('app', ['lib.logger'])
+  .config(['LoggerConfigProvider', function(cfg){
+    cfg.config({
+      showLocation: true
+    });
   }])
-  .controller("main", ["$scope", "Logger", function($scope, Logger) {
-    var l1 = Logger();
-//    var l2 = Logger(logger)('foo');
-    var l2 = l1.logger('foo');
-    var l3 = l2.logger('bar');
+  .controller('main', ['$scope', '$log', function($scope, $log) {
+    var l1 = $log.getInstance();
+    var l2 = $log.getInstance('foo');
+    var l3 = $log.getInstance('bar');
     $scope.info = function() {
       l1.info($scope.myInput);
     }
