@@ -2,7 +2,8 @@ angular
   .module('app', ['lib.logger'])
   .config(['LoggerConfigProvider', function(cfg){
     cfg.config({
-      showLocation: true
+      showLocation: true,
+      storeEntries: true
     });
   }])
   .controller('main', ['$scope', '$log', function($scope, $log) {
@@ -17,5 +18,8 @@ angular
     }
     $scope.error = function() {
       l3.error($scope.myInput);
+    }
+    $scope.showStored = function() {
+      console.log($log.getStoredEntries());
     }
   }]);
